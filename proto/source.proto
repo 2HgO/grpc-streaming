@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+service Source {
+	rpc GetVideo(VideoInfo) returns (stream Video) {}
+}
+
+message VideoInfo {
+	string name = 1;
+	string quality = 2;
+}
+
+message Video {
+	bytes data = 1;
+}
