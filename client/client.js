@@ -6,7 +6,7 @@ const client = new SourceClient("http://localhost:55099");
 var __codec__ = 'video/mp4; codecs="avc1.640032"; profiles="mp42,mp41,isom,avc1"';
 
 var info = new VideoInfo();
-info.setName("Dafodil");
+info.setName("Daffodil");
 
 const EOF_INDICATOR = 0xffffffff
 
