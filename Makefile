@@ -1,5 +1,10 @@
 .PHONY: start
-start: video-server envoy-proxy static-gateway
+start: docker-compose down
+	@ docker-compose up -d
+	@ cd client && python3 -m http.server 8081
+
+.PHONY: start-manual
+start-manual: video-server envoy-proxy static-gateway
 
 .PHONY: video-server
 video-server:

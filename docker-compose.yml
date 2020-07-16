@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  video-server:
+    build: ./services/videoStore
+    expose:
+      - 55052
+    restart: unless-stopped
+    links:
+      - auth-server
+  auth-server:
+    build: ./services/auth
+    expose:
+      - 55056
+    restart: unless-stopped
+    environment:
+      - DB_URL=mongodb://mongo:27017
+    depends_on:
+      - mongo
+  mongo:
+    image: 'mongo:4.2'
+    expose:
+      - 27017
+    volumes:
+      - mongo:/data/db
+  envoy-proxy:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.envoy
+    ports:
+      - 55099:55099
+      - 9901:9901
+    links: 
+      - video-server
+      - auth-server
+      
+volumes:
+  mongo:

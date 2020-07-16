@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"time"
+	"videoStream/auth"
 
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -21,11 +22,11 @@ func init() {
 
 const (
 	UnaryInit string = "[\033[97;44mSourceService\033[0m] Handling RPC method=%s; Origin=%s\n"
-	UnaryInfo string = "[%sSourceService\033[0m] Handled RPC method=%s; Origin=%s; Duration=%s; Error=%v"
+	UnaryInfo string = "[%sSourceService\033[0m] Handled RPC method=%s; Duration=%s; Error=%v"
 	UnaryError string = "[\033[97;41mSourceService\033[0m] error occured during RPC method=%s; Error=%v"
 
 	StreamInit string = "[\033[97;44mSourceService\033[0m] Handling RPC stream method=%s; Origin=%s\n"
-	StreamInfo string = "[%sSourceService\033[0m] Handled RPC stream method=%s; Origin=%s; Duration=%s; Error=%v"
+	StreamInfo string = "[%sSourceService\033[0m] Handled RPC stream method=%s; Duration=%s; Error=%v"
 	StreamError string = "[\033[97;41mSourceService\033[0m] error occured during RPC stream method=%s; Error=%v"
 )
 
@@ -39,17 +40,25 @@ func UnaryRecoveryInterceptor(ctx context.Context, req interface{}, info *grpc.U
 	}()
 	origin := "UNKNOWN"
 	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		orMD := md.Get("origin")
-		if len(orMD) > 0 {
-			origin = orMD[0]
-		}
+	if !ok {
+		return nil, status.Error(codes.InvalidArgument, "no metadata")
+	}
+	orMD := md.Get("origin")
+	if len(orMD) > 0 {
+		origin = orMD[0]
+	}
+	auMd := md.Get("authorization")
+	if len(auMd) < 1 {
+		return nil, status.Error(codes.Unauthenticated, "authentication unsuccessful")
+	}
+	token := auMd[0]
+
+	if res, rErr := UserClient.ValidateToken(context.TODO(), &auth.ValidationInfo{Token: token}); rErr != nil || !res.Success {
+		return nil, status.Error(codes.Unauthenticated, "authentication unsuccessful")
 	}
 
 	grpcLog.Infof(UnaryInit, info.FullMethod, origin)
 	start := time.Now()
-
-	// [TODO]: add authentication from auth service implemented in Julia
 
 	resp, erro := handler(ctx, req)
 
@@ -67,16 +76,24 @@ func StreamRecoveryInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc
 	}()
 	origin := "UNKNOWN"
 	md, ok := metadata.FromIncomingContext(ss.Context())
-	if ok {
-		orMD := md.Get("origin")
-		if len(orMD) > 0 {
-			origin = orMD[0]
-		}
+	if !ok {
+		return status.Error(codes.InvalidArgument, "no metadata")
+	}
+	orMD := md.Get("origin")
+	if len(orMD) > 0 {
+		origin = orMD[0]
+	}
+	auMd := md.Get("authorization")
+	if len(auMd) < 1 {
+		return status.Error(codes.Unauthenticated, "authentication unsuccessful")
+	}
+	token := auMd[0]
+
+	if res, rErr := UserClient.ValidateToken(context.TODO(), &auth.ValidationInfo{Token: token}); rErr != nil || !res.Success {
+		return status.Error(codes.Unauthenticated, "authentication unsuccessful")
 	}
 	grpcLog.Infof(StreamInit, info.FullMethod, origin)
 	start := time.Now()
-
-	// [TODO]: add authentication from auth service implemented in Julia
 
 	err = handler(srv, ss)
 
