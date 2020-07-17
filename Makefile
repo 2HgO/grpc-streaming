@@ -1,5 +1,5 @@
 .PHONY: start
-start: docker-compose down
+start: stop
 	@ docker-compose up -d
 	@ cd client && python3 -m http.server 8081
 
@@ -28,6 +28,10 @@ clean:
 	@ docker kill envoy-proxy | true &> /dev/null
 	@ docker image rm stream/service | true &> /dev/null
 	@ docker image rm stream/envoy | true &> /dev/null
+
+.PHONY: stop
+stop:
+	@ docker-compose down &> /dev/null | true
 
 transform-mp4:
 	MP4Box -dash 1000 -rap -frag-rap ${FILE_NAME}
